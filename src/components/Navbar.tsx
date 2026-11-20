@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Tv, Sparkles, MessageCircle } from "lucide-react";
+import { Sparkles, MessageCircle } from "lucide-react";
 import { getWhatsAppUrl } from "@/config/site";
+import { HazeLogo } from "@/components/HazeLogo";
 import { useScroll } from "framer-motion";
 
 export function Navbar() {
@@ -25,19 +26,9 @@ export function Navbar() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-xl bg-haze-card border border-haze-line flex items-center justify-center text-haze-primary group-hover:border-haze-primary transition-all duration-300 shadow-purple-glow">
-            <Tv className="w-5 h-5 text-haze-primary" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-display font-bold text-xl tracking-wider text-haze-text">
-              HAZE<span className="text-haze-primary">TV</span>
-            </span>
-            <span className="text-[10px] text-haze-muted tracking-widest uppercase -mt-1 font-semibold">
-              Streaming
-            </span>
-          </div>
+        {/* Brand Logo Oficial */}
+        <Link href="/" className="group">
+          <HazeLogo />
         </Link>
 
         {/* Desktop Navigation Links */}
@@ -75,7 +66,7 @@ export function Navbar() {
             href={getWhatsAppUrl()}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-haze-cta text-haze-base font-semibold text-sm hover:brightness-110 active:scale-[0.98] transition-all shadow-green-glow"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-haze-cta text-haze-base font-bold text-sm hover:brightness-110 active:scale-[0.98] transition-all shadow-green-glow"
           >
             <Sparkles className="w-4 h-4" />
             <span>Teste 4 Horas</span>

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Tv, Shield, FileText, RefreshCw, X } from "lucide-react";
+import { Shield, FileText, RefreshCw, X, Instagram, MessageCircle } from "lucide-react";
 import { SITE_CONFIG, getWhatsAppUrl } from "@/config/site";
+import { HazeLogo } from "@/components/HazeLogo";
 
 export function Footer() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
@@ -14,23 +15,36 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-haze-line/60">
           {/* Coluna 1: Marca & Descrição */}
           <div className="md:col-span-2">
-            <Link href="/" className="inline-flex items-center gap-2 mb-4 group">
-              <div className="w-8 h-8 rounded-lg bg-haze-card border border-haze-line flex items-center justify-center text-haze-primary">
-                <Tv className="w-4 h-4 text-haze-primary" />
-              </div>
-              <span className="font-display font-bold text-lg tracking-wider text-haze-text">
-                HAZE<span className="text-haze-primary">TV</span>
-              </span>
+            <Link href="/" className="inline-block mb-4 group">
+              <HazeLogo />
             </Link>
             <p className="text-xs text-haze-muted leading-relaxed max-w-sm mb-4">
               {SITE_CONFIG.slogan} — Entretenimento digital com alta estabilidade, baixa latência e transmissão contínua.
             </p>
-            <div className="text-[11px] text-haze-muted/80 space-y-1">
+            <div className="text-[11px] text-haze-muted/80 space-y-1.5">
               <div>Operação: <span className="text-haze-text font-medium">{SITE_CONFIG.company.legalName}</span></div>
-              <div>Atendimento e Suporte: <span className="text-haze-text font-medium">Via WhatsApp</span></div>
-              {SITE_CONFIG.company.cnpj && (
-                <div>CNPJ: <span className="text-haze-text font-mono">{SITE_CONFIG.company.cnpj}</span></div>
-              )}
+              <div className="flex items-center gap-2">
+                <span>Atendimento Oficial:</span>
+                <a
+                  href={getWhatsAppUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-haze-cta font-medium hover:underline inline-flex items-center gap-1"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+                </a>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>Instagram Oficial:</span>
+                <a
+                  href={SITE_CONFIG.instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-haze-primary font-medium hover:underline inline-flex items-center gap-1"
+                >
+                  <Instagram className="w-3.5 h-3.5" /> {SITE_CONFIG.instagram}
+                </a>
+              </div>
             </div>
           </div>
 
@@ -109,7 +123,7 @@ export function Footer() {
                   href={getWhatsAppUrl("Olá! Gostaria de falar com o atendimento ao cliente da Haze TV.")}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-haze-primary hover:underline transition-colors block pt-1"
+                  className="text-haze-primary hover:underline transition-colors block pt-1 font-medium"
                 >
                   Canal de Contato Oficial (WhatsApp)
                 </a>
@@ -144,7 +158,7 @@ export function Footer() {
               <div>
                 <h3 className="font-display font-bold text-xl mb-3 text-haze-text">Termos de Uso</h3>
                 <div className="text-xs text-haze-muted space-y-3 leading-relaxed">
-                  <p>Estes Termos de Uso regulam o acesso aos serviços fornecidos pela <strong>{SITE_CONFIG.company.legalName}</strong> (CNPJ: {SITE_CONFIG.company.cnpj}).</p>
+                  <p>Estes Termos de Uso regulam o acesso aos serviços fornecidos pela <strong>{SITE_CONFIG.company.legalName}</strong>.</p>
                   <p>1. <strong>Finalidade:</strong> A Haze TV oferece planos de assinatura e testes de acesso temporário a conteúdos digitais para fins estritamente pessoais e não comerciais.</p>
                   <p>2. <strong>Compatibilidade:</strong> O assinante é responsável por possuir dispositivo compatível e conexão com a internet que atenda aos requisitos mínimos recomendados.</p>
                   <p>3. <strong>Uso de Contas:</strong> O acesso é intransferível e limitado ao número de conexões simultâneas estipulado no plano contratado.</p>
@@ -180,4 +194,3 @@ export function Footer() {
     </footer>
   );
 }
-

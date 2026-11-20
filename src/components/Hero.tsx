@@ -25,11 +25,11 @@ export function Hero() {
     <section className="relative pt-10 pb-20 md:pt-16 md:pb-32 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto">
-          {/* Badge de boas-vindas com animação CSS suave e zero hydration mismatch */}
+          {/* Badge Oficial da Prancha 01: STREAMING 4K • SERVIDOR DEDICADO • ZERO TRAVAMENTO */}
           <div className="animate-hero-badge">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-haze-card border border-haze-line text-xs font-medium text-haze-muted mb-6 shadow-sm">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-haze-card border border-[#10B981]/40 text-xs font-semibold text-haze-text mb-6 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-haze-cta animate-pulse" />
-              <span>{SITE_CONFIG.secondarySlogan}</span>
+              <span className="tracking-wide">{SITE_CONFIG.secondarySlogan}</span>
             </div>
           </div>
 
