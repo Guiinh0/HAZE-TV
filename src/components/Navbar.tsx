@@ -45,9 +45,15 @@ export function Navbar() {
           <a href="#planos" className="hover:text-haze-text transition-colors">
             Planos
           </a>
-          <a href="#faq" className="hover:text-haze-text transition-colors">
+          <a href="/#faq" className="hover:text-haze-text transition-colors">
             FAQ
           </a>
+          <Link
+            href="/como-assistir"
+            className="text-haze-primary font-semibold hover:text-white transition-colors flex items-center gap-1"
+          >
+            <span>Como Assistir</span>
+          </Link>
         </nav>
 
         {/* Action Button */}

@@ -45,3 +45,4 @@ export function HazeLogo({ className = "", size = "md" }: HazeLogoProps) {
     </div>
   );
 }
+

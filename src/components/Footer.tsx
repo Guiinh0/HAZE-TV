@@ -75,9 +75,17 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#faq" className="hover:text-haze-text transition-colors">
+                <a href="/#faq" className="hover:text-haze-text transition-colors">
                   Perguntas Frequentes
                 </a>
+              </li>
+              <li>
+                <Link
+                  href="/como-assistir"
+                  className="text-haze-primary hover:underline transition-colors font-medium"
+                >
+                  Central: Como Assistir na TV
+                </Link>
               </li>
             </ul>
           </div>
