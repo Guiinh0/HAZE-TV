@@ -13,9 +13,8 @@ export const SITE_CONFIG = {
     series: "9.000+",
   },
 
-  // Insira o número do chip da Claro quando chegar (ex: 5511999999999)
   whatsapp: {
-    number: "", // Aguardando chip da Claro
+    number: "5513974086517", // WhatsApp Oficial Haze TV (Claro)
     defaultMessage: "Olá! Quero solicitar o teste grátis de 4 horas da Haze TV.",
   },
   
