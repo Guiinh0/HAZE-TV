@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Play,
   Pause,
@@ -28,6 +28,11 @@ import {
   PlaySquare,
   Film,
   Music,
+  Volume2,
+  VolumeX,
+  Video,
+  Subtitles,
+  X,
 } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { getWhatsAppUrl } from "@/config/site";
@@ -37,6 +42,15 @@ interface TutorialZuxoProps {
   copiedProvider?: boolean;
 }
 
+const STEP_NARRATIONS = [
+  "Primeiro, abra a loja de aplicativos da sua TV, celular ou computador, pesquise por Zuxo Player e toque em Baixar ou Instalar.",
+  "Ao abrir o aplicativo, aparece a tela de boas-vindas. Leia rapidamente e toque em Entendi e concordo.",
+  "Na próxima mensagem, toque em Começar para entrar no aplicativo.",
+  "Na tela inicial, toque no botão Adicionar, no canto superior direito.",
+  "Agora escolha a primeira opção: Tem uma lista de provedor?",
+  "Por último, no campo do servidor digite 111. Depois, informe o usuário e a senha que enviamos pelo WhatsApp e toque em Entrar. Pronto, é só aproveitar a sua sessão!",
+];
+
 export function TutorialZuxo({ onCopyProvider, copiedProvider }: TutorialZuxoProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -44,6 +58,54 @@ export function TutorialZuxo({ onCopyProvider, copiedProvider }: TutorialZuxoPro
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isInView, setIsInView] = useState(false);
   const shouldReduceMotion = useReducedMotion();
+
+  // Estados de Narração, Legendas e Modal de Vídeo
+  const [isNarrationEnabled, setIsNarrationEnabled] = useState(false);
+  const [showSubtitles, setShowSubtitles] = useState(true);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [videoFormat, setVideoFormat] = useState<"16x9" | "9x16">("16x9");
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const stepStartTimeRef = useRef<number>(Date.now());
+
+  // Carregar preferência salva em localStorage
+  useEffect(() => {
+    try {
+      const savedNarration = localStorage.getItem("haze_narration_enabled");
+      if (savedNarration === "true") {
+        setIsNarrationEnabled(true);
+      }
+      const savedSubtitles = localStorage.getItem("haze_subtitles_enabled");
+      if (savedSubtitles === "false") {
+        setShowSubtitles(false);
+      }
+    } catch {
+      // Ignora erro em modo privado
+    }
+  }, []);
+
+  // Salvar preferências em localStorage
+  const toggleNarration = () => {
+    setHasUserInteracted(true);
+    setIsNarrationEnabled((prev) => {
+      const nextState = !prev;
+      try {
+        localStorage.setItem("haze_narration_enabled", String(nextState));
+      } catch {}
+      return nextState;
+    });
+  };
+
+  const toggleSubtitles = () => {
+    setShowSubtitles((prev) => {
+      const nextState = !prev;
+      try {
+        localStorage.setItem("haze_subtitles_enabled", String(nextState));
+      } catch {}
+      return nextState;
+    });
+  };
 
   // Lazy load: IntersectionObserver para pausar quando sair da tela
   useEffect(() => {
@@ -126,16 +188,82 @@ export function TutorialZuxo({ onCopyProvider, copiedProvider }: TutorialZuxoPro
 
   const totalSteps = steps.length;
 
-  // Autoplay a cada 5 segundos
+  // Função auxiliar para avançar passo
+  const advanceStep = useCallback(() => {
+    setCurrentStep((prev) => (prev + 1) % totalSteps);
+    stepStartTimeRef.current = Date.now();
+  }, [totalSteps]);
+
+  // Controle de reprodução de áudio e sincronização
   useEffect(() => {
+    // Parar áudio anterior se houver
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    stepStartTimeRef.current = Date.now();
+
+    if (!isNarrationEnabled || !hasUserInteracted || !isInView || !isPlaying) {
+      return;
+    }
+
+    const audioUrl = `/audio/tutorial/passo-${currentStep + 1}.mp3`;
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+
+    audio.play().catch(() => {
+      // Falha de autoplay se ainda não houve interação
+    });
+
+    // Quando o áudio terminar, espera garantir o mínimo de 5s no passo antes de avançar
+    audio.onended = () => {
+      if (!isPlaying || !isNarrationEnabled) return;
+      const elapsed = Date.now() - stepStartTimeRef.current;
+      const remainingTime = Math.max(500, 5000 - elapsed);
+      setTimeout(() => {
+        advanceStep();
+      }, remainingTime);
+    };
+
+    return () => {
+      audio.pause();
+      audio.onended = null;
+    };
+  }, [currentStep, isNarrationEnabled, hasUserInteracted, isInView, isPlaying, advanceStep]);
+
+  // Se a narração estiver pausada/desligada, usamos o timer padrão de 5s
+  useEffect(() => {
+    if (isNarrationEnabled) return; // Narração controla o tempo via áudio
     if (!isPlaying || !isInView || shouldReduceMotion) return;
 
     const timer = setInterval(() => {
-      setCurrentStep((prev) => (prev + 1) % totalSteps);
+      advanceStep();
     }, 5000);
 
     return () => clearInterval(timer);
-  }, [isPlaying, isInView, shouldReduceMotion, totalSteps]);
+  }, [isPlaying, isInView, shouldReduceMotion, isNarrationEnabled, advanceStep]);
+
+  // Pausar/despausar o áudio com o botão de reprodução geral
+  const handleTogglePlay = () => {
+    setHasUserInteracted(true);
+    const nextPlay = !isPlaying;
+    setIsPlaying(nextPlay);
+    if (!nextPlay && audioRef.current) {
+      audioRef.current.pause();
+    } else if (nextPlay && isNarrationEnabled && audioRef.current) {
+      audioRef.current.play().catch(() => {});
+    }
+  };
+
+  const handleManualStepChange = (newStep: number) => {
+    setHasUserInteracted(true);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setCurrentStep(newStep);
+  };
 
   const handleCopy = () => {
     if (onCopyProvider) {
@@ -175,7 +303,7 @@ export function TutorialZuxo({ onCopyProvider, copiedProvider }: TutorialZuxoPro
         <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-haze-primary/20 border border-haze-primary/40 text-xs font-bold text-haze-primary uppercase tracking-wider mb-3 shadow-sm">
             <Sparkles className="w-3.5 h-3.5 text-haze-primary" />
-            <span>Passo a Passo Interativo em Alta Definição</span>
+            <span>Passo a Passo com Narração em Voz & Vídeo</span>
           </div>
           <h2 className="font-display font-bold text-2xl sm:text-3xl md:text-4xl text-haze-text tracking-tight mb-2.5">
             Como instalar e fazer login no Zuxo Player
@@ -193,10 +321,7 @@ export function TutorialZuxo({ onCopyProvider, copiedProvider }: TutorialZuxoPro
               <button
                 key={idx}
                 type="button"
-                onClick={() => {
-                  setCurrentStep(idx);
-                  setIsPlaying(false);
-                }}
+                onClick={() => handleManualStepChange(idx)}
                 className={`relative px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                   isActive
                     ? "bg-haze-primary text-white shadow-purple-glow scale-105"
@@ -210,7 +335,7 @@ export function TutorialZuxo({ onCopyProvider, copiedProvider }: TutorialZuxoPro
                     key={`step-progress-${currentStep}`}
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
-                    transition={{ duration: 5, ease: "linear" }}
+                    transition={{ duration: isNarrationEnabled ? 9 : 5, ease: "linear" }}
                     className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-haze-cta origin-left rounded-b-xl"
                   />
                 )}
@@ -290,54 +415,103 @@ export function TutorialZuxo({ onCopyProvider, copiedProvider }: TutorialZuxoPro
                 )}
               </div>
 
-              {/* Controles de Navegação (Anterior, Play/Pause, Próximo) */}
-              <div className="pt-4 border-t border-haze-line/60 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrentStep((prev) => (prev > 0 ? prev - 1 : totalSteps - 1));
-                      setIsPlaying(false);
-                    }}
-                    className="p-2.5 rounded-xl bg-haze-card border border-haze-line text-haze-muted hover:text-haze-text hover:border-haze-primary/50 transition-all"
-                    title="Passo Anterior"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
+              {/* Controles de Navegação + Narração + Vídeo */}
+              <div className="pt-4 border-t border-haze-line/60 space-y-3">
+                {/* Linha 1: Controles de Passos & Play/Pause */}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleManualStepChange(currentStep > 0 ? currentStep - 1 : totalSteps - 1)
+                      }
+                      className="p-2.5 rounded-xl bg-haze-card border border-haze-line text-haze-muted hover:text-haze-text hover:border-haze-primary/50 transition-all"
+                      title="Passo Anterior"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
 
+                    <button
+                      type="button"
+                      onClick={handleTogglePlay}
+                      className="px-3.5 py-2 rounded-xl bg-haze-card border border-haze-line text-xs font-semibold text-haze-text hover:border-haze-primary/50 transition-all flex items-center gap-2"
+                    >
+                      {isPlaying ? (
+                        <>
+                          <Pause className="w-3.5 h-3.5 text-haze-primary" />
+                          <span>Pausar</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-3.5 h-3.5 text-haze-cta fill-current" />
+                          <span>Reproduzir</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleManualStepChange((currentStep + 1) % totalSteps)}
+                      className="p-2.5 rounded-xl bg-haze-card border border-haze-line text-haze-muted hover:text-haze-text hover:border-haze-primary/50 transition-all"
+                      title="Próximo Passo"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="text-xs font-mono text-haze-muted">
+                    <span className="text-haze-text font-bold">{currentStep + 1}</span> de {totalSteps}
+                  </div>
+                </div>
+
+                {/* Linha 2: Botão de Narração, Legendas e Assistir em Vídeo */}
+                <div className="flex items-center gap-2 flex-wrap pt-1">
+                  {/* Botão de Narração em Voz */}
                   <button
                     type="button"
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    className="px-3.5 py-2 rounded-xl bg-haze-card border border-haze-line text-xs font-semibold text-haze-text hover:border-haze-primary/50 transition-all flex items-center gap-2"
+                    onClick={toggleNarration}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      isNarrationEnabled
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 shadow-green-glow"
+                        : "bg-haze-card border border-haze-line text-haze-muted hover:text-haze-text"
+                    }`}
                   >
-                    {isPlaying ? (
+                    {isNarrationEnabled ? (
                       <>
-                        <Pause className="w-3.5 h-3.5 text-haze-primary" />
-                        <span>Pausar</span>
+                        <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                        <span>Narração Ativa</span>
                       </>
                     ) : (
                       <>
-                        <Play className="w-3.5 h-3.5 text-haze-cta fill-current" />
-                        <span>Reproduzir</span>
+                        <VolumeX className="w-3.5 h-3.5" />
+                        <span>Ativar narração</span>
                       </>
                     )}
                   </button>
 
+                  {/* Botão de Legendas */}
                   <button
                     type="button"
-                    onClick={() => {
-                      setCurrentStep((prev) => (prev + 1) % totalSteps);
-                      setIsPlaying(false);
-                    }}
-                    className="p-2.5 rounded-xl bg-haze-card border border-haze-line text-haze-muted hover:text-haze-text hover:border-haze-primary/50 transition-all"
-                    title="Próximo Passo"
+                    onClick={toggleSubtitles}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                      showSubtitles
+                        ? "bg-haze-primary/20 text-haze-primary border border-haze-primary/40"
+                        : "bg-haze-card border border-haze-line text-haze-muted hover:text-haze-text"
+                    }`}
                   >
-                    <ChevronRight className="w-4 h-4" />
+                    <Subtitles className="w-3.5 h-3.5" />
+                    <span>Legendas {showSubtitles ? "ON" : "OFF"}</span>
                   </button>
-                </div>
 
-                <div className="text-xs font-mono text-haze-muted">
-                  <span className="text-haze-text font-bold">{currentStep + 1}</span> de {totalSteps}
+                  {/* Botão Assistir em Vídeo */}
+                  <button
+                    type="button"
+                    onClick={() => setIsVideoModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-haze-primary to-purple-600 text-white text-xs font-bold shadow-purple-glow hover:brightness-110 active:scale-95 transition-all ml-auto"
+                  >
+                    <Video className="w-3.5 h-3.5" />
+                    <span>Assistir em vídeo</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -356,13 +530,21 @@ export function TutorialZuxo({ onCopyProvider, copiedProvider }: TutorialZuxoPro
                       SIMULADOR DE TELA • SMART TV / APP
                     </span>
                   </div>
-                  <span className="px-2 py-0.5 rounded bg-haze-card border border-haze-line text-[10px] text-haze-cta font-bold">
-                    PASSO {activeStep.number}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {isNarrationEnabled && (
+                      <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
+                        <Volume2 className="w-3 h-3 animate-pulse" />
+                        Voz Francisca
+                      </span>
+                    )}
+                    <span className="px-2 py-0.5 rounded bg-haze-card border border-haze-line text-[10px] text-haze-cta font-bold">
+                      PASSO {activeStep.number}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Conteúdo Dinâmico do Simulador em Alta Resolução */}
-                <div className="relative min-h-[340px] sm:min-h-[380px] w-full bg-[#07070B] flex items-center justify-center p-3 sm:p-5 overflow-hidden">
+                <div className="relative min-h-[340px] sm:min-h-[390px] w-full bg-[#07070B] flex items-center justify-center p-3 sm:p-5 overflow-hidden">
                   <AnimatePresence mode="wait" initial={false}>
                     <motion.div
                       key={currentStep}
@@ -375,6 +557,23 @@ export function TutorialZuxo({ onCopyProvider, copiedProvider }: TutorialZuxoPro
                       <ZuxoScreenSimulator step={currentStep} />
                     </motion.div>
                   </AnimatePresence>
+
+                  {/* Legenda Sincronizada com a Fala (CC) */}
+                  {showSubtitles && (
+                    <motion.div
+                      key={`subtitle-${currentStep}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 p-3 rounded-xl bg-black/90 border border-emerald-500/40 backdrop-blur-md shadow-2xl flex items-center gap-2.5 z-20 pointer-events-none"
+                    >
+                      <span className="w-6 h-6 rounded-md bg-emerald-500/20 text-emerald-400 font-bold text-[11px] flex items-center justify-center shrink-0">
+                        CC
+                      </span>
+                      <p className="text-xs sm:text-[13px] text-zinc-100 font-medium leading-snug">
+                        {STEP_NARRATIONS[currentStep]}
+                      </p>
+                    </motion.div>
+                  )}
                 </div>
 
                 {/* Rodapé da Moldura com status */}
@@ -412,6 +611,109 @@ export function TutorialZuxo({ onCopyProvider, copiedProvider }: TutorialZuxoPro
           </a>
         </div>
       </div>
+
+      {/* Modal de Vídeo MP4 (16:9 e 9:16) */}
+      <AnimatePresence>
+        {isVideoModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-4xl bg-haze-card border border-haze-primary/50 rounded-2xl md:rounded-3xl p-5 sm:p-6 shadow-2xl overflow-hidden"
+            >
+              {/* Cabeçalho do Modal */}
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-haze-line">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-haze-primary/20 text-haze-primary flex items-center justify-center font-bold">
+                    <Video className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-lg text-white">
+                      Tutorial em Vídeo • Zuxo Player
+                    </h3>
+                    <p className="text-xs text-haze-muted">
+                      Assista ao passo a passo completo narrado com áudio e legendas
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsVideoModalOpen(false)}
+                  className="p-2 rounded-xl bg-haze-base border border-haze-line text-haze-muted hover:text-white transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Seletor de Formato: 16:9 ou 9:16 */}
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setVideoFormat("16x9")}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    videoFormat === "16x9"
+                      ? "bg-haze-primary text-white shadow-purple-glow"
+                      : "bg-haze-base border border-haze-line text-haze-muted hover:text-white"
+                  }`}
+                >
+                  🖥️ 16:9 Widescreen (Smart TV / Desktop)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVideoFormat("9x16")}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    videoFormat === "9x16"
+                      ? "bg-haze-primary text-white shadow-purple-glow"
+                      : "bg-haze-base border border-haze-line text-haze-muted hover:text-white"
+                  }`}
+                >
+                  📱 9:16 Vertical (Reels / WhatsApp)
+                </button>
+              </div>
+
+              {/* Player de Vídeo */}
+              <div
+                className={`w-full mx-auto bg-black rounded-xl overflow-hidden border border-white/10 flex items-center justify-center ${
+                  videoFormat === "16x9" ? "aspect-[16/9]" : "max-w-xs aspect-[9/16]"
+                }`}
+              >
+                <video
+                  key={videoFormat}
+                  src={`/videos/tutorial-zuxo-${videoFormat}.mp4`}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              {/* Rodapé com Download e WhatsApp */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 mt-4 border-t border-haze-line text-xs">
+                <a
+                  href={`/videos/tutorial-zuxo-${videoFormat}.mp4`}
+                  download
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-haze-base border border-haze-line text-haze-muted hover:text-white transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Baixar Arquivo MP4 ({videoFormat})</span>
+                </a>
+
+                <a
+                  href={getWhatsAppUrl("Olá! Assisti ao vídeo do Zuxo Player e gostaria de ativar minha conta.")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-haze-cta text-haze-base font-bold shadow-green-glow hover:brightness-110 active:scale-95 transition-all"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Ativar Agora no WhatsApp</span>
+                </a>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

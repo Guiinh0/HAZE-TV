@@ -4,4 +4,6 @@ out
 .env*.local
 .DS_Store
 *.log
+video-tutorial/node_modules
+video-tutorial/.remotion
 
