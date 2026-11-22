@@ -21,6 +21,7 @@ import {
 import { HazeLogo } from "@/components/HazeLogo";
 import { Footer } from "@/components/Footer";
 import { FloatingWhatsApp } from "@/components/FloatingWhatsApp";
+import { TutorialZuxo } from "@/components/TutorialZuxo";
 import { getWhatsAppUrl } from "@/config/site";
 
 export default function ComoAssistirPage() {
@@ -191,8 +192,11 @@ export default function ComoAssistirPage() {
             </div>
           </div>
 
+          {/* Tutorial Passo a Passo Animado Zuxo Player */}
+          <TutorialZuxo onCopyProvider={copyProvider} copiedProvider={copied} />
+
           {/* Filtros de Dispositivos */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
+          <div id="filtros-players" className="flex flex-wrap items-center justify-center gap-2 mb-8">
             {[
               { id: "todos", label: "Todos os Players", icon: Sparkles },
               { id: "tv", label: "Smart TV (Samsung/LG/Roku)", icon: Tv },
